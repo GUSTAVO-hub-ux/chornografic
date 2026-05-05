@@ -698,12 +698,10 @@
     </div>
 
     <script type="module">
-        // Importações atualizadas do Firebase v10
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
         import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, getDoc, setDoc, query, orderBy } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
         import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-analytics.js";
 
-        // SUA NOVA CONFIGURAÇÃO ATUALIZADA
         const firebaseConfig = {
             apiKey: "AIzaSyBmKEhVzGXBwJvPtyLQ9KfG8wpK8YuWolE",
             authDomain: "chornografic-f759a.firebaseapp.com",
@@ -728,11 +726,12 @@
                 if (docSnap.exists()) {
                     precosGlobais = docSnap.data();
                 }
-            } catch (e) { console.log("Erro ao carregar preços."); }
+            } catch (error) { 
+                console.log("Aviso ao carregar preços. Se você ainda não salvou preços no admin ou as regras estão bloqueando, é normal:", error.message); 
+            }
         }
         carregarPrecosIniciais();
 
-        // Background slider
         const bgSlides = document.querySelectorAll('.bg-slide');
         let bgAtual = 0;
         setInterval(() => {
@@ -751,7 +750,6 @@
             document.getElementById('modal').style.display = 'flex';
         }
 
-        // --- PORTFÓLIO ---
         const modelos = document.querySelectorAll('.modelo-slide');
         const contadorText = document.getElementById('contadorModelos');
         let modeloAtual = 0;
@@ -782,7 +780,10 @@
                 fecharModal('modal');
                 document.getElementById('orderForm').reset();
                 document.getElementById('modalSucesso').style.display = 'flex';
-            } catch (error) { alert("Erro ao enviar pedido."); }
+            } catch (error) { 
+                console.error("ERRO AO SALVAR:", error);
+                alert("Erro ao enviar pedido! Mensagem do Firebase: " + error.message + "\n\nVerifique se o banco Firestore está criado e se as regras de segurança permitem escrita."); 
+            }
             finally { btn.innerText = "Enviar Pedido"; btn.disabled = false; }
         }
 
@@ -811,14 +812,17 @@
                 });
                 divLista.innerHTML = html + '</table>';
 
-                // Form Preços
                 let formHtml = '';
                 categoriasServicos.forEach(cat => {
                     formHtml += `<div class="form-group"><label>${cat}</label>
                     <input type="text" id="input_${cat.replace(/\s/g, '')}" value="${precosGlobais[cat] || ''}"></div>`;
                 });
                 document.getElementById('formPrecosAdmin').innerHTML = formHtml;
-            } catch (e) { divLista.innerHTML = "Erro ao carregar."; }
+            } catch (error) { 
+                console.error("Erro ao carregar admin:", error);
+                divLista.innerHTML = "Erro ao carregar. Verifique o console."; 
+                alert("Erro ao listar: " + error.message);
+            }
         }
 
         window.salvarPrecosAdmin = async function() {
@@ -829,15 +833,23 @@
             try {
                 await setDoc(doc(db, "configuracoes", "precos"), novos);
                 precosGlobais = novos;
-                alert("Salvo!");
-            } catch (e) { alert("Erro ao salvar."); }
+                alert("Salvo com sucesso!");
+            } catch (error) { 
+                console.error("Erro ao salvar preços:", error);
+                alert("Erro ao salvar preços: " + error.message); 
+            }
         }
 
         window.limparPedidos = async function() {
             if(confirm('Apagar tudo?')) {
-                const snap = await getDocs(collection(db, "pedidos"));
-                snap.forEach(async (d) => await deleteDoc(doc(db, "pedidos", d.id)));
-                carregarPainelAdmin();
+                try {
+                    const snap = await getDocs(collection(db, "pedidos"));
+                    snap.forEach(async (d) => await deleteDoc(doc(db, "pedidos", d.id)));
+                    carregarPainelAdmin();
+                } catch (error) {
+                    console.error("Erro ao apagar:", error);
+                    alert("Erro ao apagar pedidos: " + error.message);
+                }
             }
         }
     </script>
